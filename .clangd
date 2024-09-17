@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-ferror-limit=5000, -std=c++20]

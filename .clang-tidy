@@ -1,5 +1,3 @@
----
-
 Checks: >
   -*,
   clang-diagnostic-*,
@@ -40,7 +38,6 @@ Checks: >
 
 WarningsAsErrors: "*"
 HeaderFilterRegex: ""
-AnalyzeTemporaryDtors: false
 FormatStyle: file
 CheckOptions:
   - key: performance-unnecessary-copy-initialization.ExcludedContainerTypes
@@ -359,5 +356,3 @@ CheckOptions:
     value:           'false'
   - key:             llvm-else-after-return.WarnOnUnfixable
     value:           'false'
----
-
