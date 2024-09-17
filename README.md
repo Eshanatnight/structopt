@@ -1,14 +1,10 @@
-<h1>
-  <p align="center">Structopt</p>
-</h1>
+# Structopt
 
-<p align="center">
-  Parse command line arguments by defining a struct
-</p>
+Parse command line arguments by defining a struct
 
 ## Quick Start
 
-```cpp
+```c++
 #include "structopt.hpp"
 
 struct Options {
@@ -54,7 +50,8 @@ struct Options {
 STRUCTOPT(Options, config_file, bind_address, verbose, log_level, user, files);
 ```
 
-Create a `structopt::app` and parse the command line arguments into the `Options` struct:
+Create a `structopt::app` and parse the command line arguments
+into the `Options` struct:
 
 ```cpp
 int main(int argc, char *argv[]) {
@@ -66,9 +63,12 @@ int main(int argc, char *argv[]) {
 
     // Print out parsed arguments:
 
-    // std::cout << "config_file  = " << options.config_file << "\n";
-    // std::cout << "bind_address = " << options.bind_address.value_or("not provided") << "\n";
-    // std::cout << "verbose      = " << std::boolalpha << options.verbose.value() << "\n";
+    // std::cout << "config_file  = "
+    //           << options.config_file << "\n";
+    // std::cout << "bind_address = "
+    //           << options.bind_address.value_or("not provided") << "\n";
+    // std::cout << "verbose      = "
+    //            << std::boolalpha << options.verbose.value() << "\n";
     // ...
 
   } catch (structopt::exception& e) {
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
 Now let's pass some arguments to this program:
 
-```console
+```bash
 foo@bar:~$ ./main config.csv file5.csv file6.json
 config_file  = config.csv
 bind_address = not provided
@@ -108,22 +108,22 @@ files        = { file1.txt file3.txt file4.txt }
 
 ## Table of Contents
 
-* [Getting Started](#getting-started)
-  * [Positional Arguments](#positional-arguments)
-  * [Optional Arguments](#optional-arguments)
-    * [Double dash (`--`) Argument](#double-dash----argument)
-  * [Flag Arguments](#flag-arguments)
-  * [Enum Class Arguments (Choices)](#enum-class-arguments)
-  * [Tuple Arguments](#tuple-arguments)
-  * [Vector Arguments](#vector-arguments)
-  * [Compound Arguments](#compound-arguments)
-  * [Parsing Numbers](#parsing-numbers)
-    * [Integer Literals](#integer-literals)
-    * [Floating point Literals](#floating-point-literals)
-      * [Nested Structures (Sub-commands)](#nested-structures)
-      * [Sub-Commands, Vector Arguments, and Delimited Positional Arguments](#sub-commands-vector-arguments-and-delimited-positional-arguments)
-  * [Printing Help](#printing-help)
-  * [Printing CUSTOM Help](#printing-custom-help)
+- [Getting Started](#getting-started)
+  - [Positional Arguments](#positional-arguments)
+  - [Optional Arguments](#optional-arguments)
+    - [Double dash (`--`) Argument](#double-dash----argument)
+  - [Flag Arguments](#flag-arguments)
+  - [Enum Class Arguments (Choices)](#enum-class-arguments)
+  - [Tuple Arguments](#tuple-arguments)
+  - [Vector Arguments](#vector-arguments)
+  - [Compound Arguments](#compound-arguments)
+  - [Parsing Numbers](#parsing-numbers)
+    - [Integer Literals](#integer-literals)
+    - [Floating point Literals](#floating-point-literals)
+      - [Nested Structures (Sub-commands)](#nested-structures)
+      - [Sub-Commands, Vector Arguments, and Delimited Positional Arguments](#sub-commands-vector-arguments-and-delimited-positional-arguments)
+  - [Printing Help](#printing-help)
+  - [Printing CUSTOM Help](#printing-custom-help)
 
 ## Getting Started
 
@@ -131,7 +131,9 @@ files        = { file1.txt file3.txt file4.txt }
 
 ### Positional Arguments
 
-Here's an example of two positional arguments: `input_file` and `output_file`. `input_file` is expected to be the first argument and `output_file` is expected to be the second argument
+Here's an example of two positional arguments:
+`input_file` and `output_file`. `input_file` is expected to be the first argument
+and `output_file` is expected to be the second argument
 
 ```cpp
 #include "structopt.hpp"
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main foo.txt bar.csv
 
 Input file  : foo.txt
@@ -180,7 +182,8 @@ ARGS:
 
 ### Optional Arguments
 
-Now, let's look at optional arguments. To configure an optional argument, use `std::optional` in the options struct like below.
+Now, let's look at optional arguments. To configure an optional argument,
+use `std::optional` in the options struct like below.
 
 ```cpp
 #include "structopt.hpp"
@@ -229,9 +232,9 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-***NOTE*** `structopt` supports two option delimiters, `=` and `:` for optional arguments. This is meaningful and commonly used in single-valued optional arguments, e.g., `--std=c++20`.
+**_NOTE_** `structopt` supports two option delimiters, `=` and `:` for optional arguments. This is meaningful and commonly used in single-valued optional arguments, e.g., `--std=c++20`.
 
-```console
+```bash
 foo@bar:~$ ./main -C main.cpp
 std        : c++11
 verbose    : false
@@ -257,28 +260,28 @@ Output     : main
 Input file : main.cpp
 ```
 
-***NOTE*** In summary, for a field in your struct named `bind_address`, the following are all legal ways to provide a value:
+**_NOTE_** In summary, for a field in your struct named `bind_address`, the following are all legal ways to provide a value:
 
-* Short form:
-  * `-b <value>`
-* Long form:
-  * `--bind_address <value>`
-  * `-bind_address <value>`
-* Kebab case:
-  * `--bind-address <value>`
-  * `-bind-address <value>`
-* Equal (`'='`) option delimiter
-  * `-b=<value>`
-  * `--bind_address=<value>`
-  * `-bind_address=<value>`
-  * `--bind-address=<value>`
-  * `-bind-address=<value>`
-* Colon `':'` option delimiter
-  * `-b:<value>`
-  * `--bind_address:<value>`
-  * `-bind_address:<value>`
-  * `--bind-address:<value>`
-  * `-bind-address:<value>`
+- Short form:
+  - `-b <value>`
+- Long form:
+  - `--bind_address <value>`
+  - `-bind_address <value>`
+- Kebab case:
+  - `--bind-address <value>`
+  - `-bind-address <value>`
+- Equal (`'='`) option delimiter
+  - `-b=<value>`
+  - `--bind_address=<value>`
+  - `-bind_address=<value>`
+  - `--bind-address=<value>`
+  - `-bind-address=<value>`
+- Colon `':'` option delimiter
+  - `-b:<value>`
+  - `--bind_address:<value>`
+  - `-bind_address:<value>`
+  - `--bind-address:<value>`
+  - `-bind-address:<value>`
 
 #### Double dash (`--`) Argument
 
@@ -322,7 +325,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main -v foo bar.txt
 `-v` provided - Matching is now reversed
 Search   : foo
@@ -337,9 +340,9 @@ Pathspec : bar.txt
 
 Flag arguments are `std::optional<bool>` with a default value.
 
-***NOTE*** The default value here is important. It is not a flag if a default value isn't provided. It will simply be an optional argument.
+**_NOTE_** The default value here is important. It is not a flag if a default value isn't provided. It will simply be an optional argument.
 
-***NOTE*** If `--verbose` is a flag argument with a default value of `false`, then providing the argument will set it to `true`. If `--verbose` does not have a default value, then `structopt` will expect the user to provide a value, e.g., `--verbose true`.
+**_NOTE_** If `--verbose` is a flag argument with a default value of `false`, then providing the argument will set it to `true`. If `--verbose` does not have a default value, then `structopt` will expect the user to provide a value, e.g., `--verbose true`.
 
 ```cpp
 #include "structopt.hpp"
@@ -363,7 +366,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main
 
 foo@bar:~$ ./main -v
@@ -414,7 +417,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main --color red
 #ff0000
 
@@ -485,7 +488,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main add 1 2
 3
 
@@ -517,7 +520,7 @@ $ compiler file1 file2 file3
 
 Do this by using an `std::vector<T>` (or other STL containers with `.push_back()`, e.g, `std::deque` or `std::list`).
 
-***NOTE*** Vector arguments have a cardinality of `0..*`, i.e., zero or more arguments. Unlike array types, you can provide zero arguments to a vector and `structopt` will (try to) not complain.
+**_NOTE_** Vector arguments have a cardinality of `0..*`, i.e., zero or more arguments. Unlike array types, you can provide zero arguments to a vector and `structopt` will (try to) not complain.
 
 ```cpp
 #include "structopt.hpp"
@@ -551,9 +554,9 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-***NOTE*** Notice below that the act of gathering remaining arguments is arrested as soon as an optional argument is detected. See the output of `./main file1.cpp file2.cpp --std c++17` below. Notice that `--std=c++17` is not part of the vector. This is because `--std` is a valid optional argument.
+**_NOTE_** Notice below that the act of gathering remaining arguments is arrested as soon as an optional argument is detected. See the output of `./main file1.cpp file2.cpp --std c++17` below. Notice that `--std=c++17` is not part of the vector. This is because `--std` is a valid optional argument.
 
-```console
+```bash
 foo@bar:~$ ./main
 Standard : not provided
 Files    : { }
@@ -610,7 +613,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main -ac 3.14 2.718
 a = true, b = false
 c = [3.14, 2.718]
@@ -627,7 +630,8 @@ c = [1.5, 3]
 
 #### Integer Literals
 
-`structopt` supports parsing integer literals including hexadecimal, octal, and binary notation.
+`structopt` supports parsing integer literals including hexadecimal, octal, and
+binary notation.
 
 ```cpp
 #include "structopt.hpp"
@@ -650,7 +654,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main 1 0x5B 071 0b0101 -35 +98
 1
 91
@@ -685,7 +689,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main -3.15 +2.717 2E-4 0.1e2 .5 -.3 +5.999
 -3.15
 2.717
@@ -700,8 +704,8 @@ foo@bar:~$ ./main -3.15 +2.717 2E-4 0.1e2 .5 -.3 +5.999
 
 With `structopt`, you can define sub-commands, e.g., `git init args` or `git config [flags] args` using nested structures.
 
-* Simply create a nested structure that inherits from `structopt::sub_command`
-* You can use `<nested_struct_object>.has_value()` to check if it has been invoked.
+- Simply create a nested structure that inherits from `structopt::sub_command`
+- You can use `<nested_struct_object>.has_value()` to check if it has been invoked.
 
 The following program support two sub-commands: `config` and `init`:
 
@@ -760,7 +764,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main config user.email "john.doe@foo.com"
 You invoked `git config`:
 Global : false
@@ -821,11 +825,11 @@ ARGS:
     name
 ```
 
-***NOTE*** Notice in the above stdout that the `-h` help option supports printing help both at the top-level struct and at the sub-command level.
+**_NOTE_** Notice in the above stdout that the `-h` help option supports printing help both at the top-level struct and at the sub-command level.
 
-***NOTE*** `structopt` does not allow to invoke multiple sub-commands. If one has already been invoked, you will see the following error:
+**_NOTE_** `structopt` does not allow to invoke multiple sub-commands. If one has already been invoked, you will see the following error:
 
-```console
+```bash
 foo@bar:~$ ./main config user.name "John Doe" init my_repo
 Error: failed to invoke sub-command `init` because a different sub-command, `config`, has already been invoked.
 ```
@@ -890,7 +894,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main
 
 USAGE: my_app [OPTIONS] [SUBCOMMANDS]
@@ -915,8 +919,8 @@ File    : foo.txt
 
 `structopt` will insert two optional arguments for the user: `help` and `version`.
 
-* Using `-h` or `--help` will print the help message and exit.
-* Using `-v` or `--version` will print the program version and exit.
+- Using `-h` or `--help` will print the help message and exit.
+- Using `-v` or `--version` will print the program version and exit.
 
 ```cpp
 #include "structopt.hpp"
@@ -941,7 +945,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main -h
 
 USAGE: my_app [OPTIONS] input_file output_file files
@@ -992,7 +996,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-```console
+```bash
 foo@bar:~$ ./main -h
 Usage: ./my_app input_file output_file [--bind-address BIND_ADDRESS] [files...]
 ```
