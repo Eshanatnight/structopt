@@ -168,7 +168,7 @@ namespace structopt {
 			bool dot_or_exp = false;
 
 			for(; left <= right; left++) {
-				char currentChar = input[left];
+				const char currentChar = input[left];
 
 				if(currentChar == 'e') {
 					// checks if the char 'e' has already occurred before 'e'.
@@ -281,6 +281,7 @@ namespace structopt {
 				T&) -> std::enable_if_t<!structopt::is_specialization<T, std::optional>::value &&
 											!visit_struct::traits::is_visitable<T>::value,
 						void> {
+				// BUG: not sanitizing the name may cause an issue down the line?
 				field_names.emplace_back(name);
 				positional_field_names.emplace_back(name);
 				positional_field_names_for_help.emplace_back(name);
@@ -304,8 +305,17 @@ namespace structopt {
 			template<typename T>
 			inline auto operator()(const char* name,
 				T&) -> std::enable_if_t<visit_struct::traits::is_visitable<T>::value, void> {
-				field_names.emplace_back(name);
-				nested_struct_field_names.emplace_back(name);
+				auto _name = std::string(name);
+
+				// name need to be sanitized to handle keywords(`new`, `delete`, `class`, etc.)
+				// how would we identify a keyword? use some sort of convestion
+				// say the var name needs to end with `_` char
+
+				if(_name.ends_with('_')) {
+					_name.pop_back();
+				}
+				field_names.push_back(_name);
+				nested_struct_field_names.push_back(_name);
 			}
 
 			auto is_field_name(const std::string& field_name) -> bool {
@@ -477,18 +487,7 @@ namespace structopt {
 					return false;
 				}
 
-				bool result = false;
-				if(name.size() >= 2) {
-					// e.g., -b, -v
-					if(name[0] == '-') {
-						result = true;
-						// e.g., --verbose
-						if(name[1] == '-') {
-							result = true;
-						}
-					}
-				}
-				return result;
+				return (name.size() >= 2 && name[0] == '-');
 			}
 
 			static auto is_kebab_case(
@@ -547,29 +546,23 @@ namespace structopt {
 				auto equal_pos = next.find('=');
 				auto colon_pos = next.find(':');
 
+				// not delimited
 				if(equal_pos == std::string::npos && colon_pos == std::string::npos) {
-					// not delimited
 					return { success, delimiter };
 				}
-				// assume `=` comes first
-				char chr = '=';
 
-				if(colon_pos < equal_pos) {
-					// confirmed: `:` comes first
-					chr = ':';
-				}
+				const char chr = colon_pos < equal_pos ? ':' : '=';
 
 				// split `next` into key and value check if key is an optional field
+				// TODO: use substr??
 				std::string key;
 				bool delimiter_found = false;
-				for(char idx: next) {
+				for(const char idx: next) {
 					if(idx == chr && !delimiter_found) {
 						delimiter		= chr;
 						delimiter_found = true;
-					} else {
-						if(!delimiter_found) {
-							key += idx;
-						}
+					} else if(!delimiter_found) {
+						key += idx;
 					}
 				}
 
@@ -586,7 +579,9 @@ namespace structopt {
 				std::string key;
 				std::string value;
 				bool delimiter_found = false;
-				for(char idx: next) {
+
+				// TODO: use substr??
+				for(const char idx: next) {
 					if(idx == delimiter && !delimiter_found) {
 						delimiter_found = true;
 					} else {
@@ -606,6 +601,8 @@ namespace structopt {
 			static auto lstrip_dashes(const std::string& next) -> std::string {
 				std::string result;
 				bool prefix_dashes_ended = false;
+
+				// TODO: use substr??
 				for(const auto& chr: next) {
 					if(!prefix_dashes_ended && chr != '-') {
 						prefix_dashes_ended = true;
@@ -626,7 +623,7 @@ namespace structopt {
 
 				if(next.size() == 2 && next[0] == '-') {
 					// short form of optional argument
-					for(auto& oarg: visitor.optional_field_names) {
+					for(const auto& oarg: visitor.optional_field_names) {
 						if(oarg[0] == next[1]) {
 							// second character of next matches first character
 							// of some optional field_name
@@ -635,17 +632,14 @@ namespace structopt {
 						}
 					}
 				} else {
-					// long form of optional argument
-
-					// strip dashes on the left
+					// long form of optional argument strip dashes on the left
 					std::string potential_field_name = lstrip_dashes(next);
 
 					// replace `-` in the middle with `_`
 					std::replace(
 						potential_field_name.begin(), potential_field_name.end(), '-', '_');
 
-					// check if `potential_field_name` is in the optional field
-					// names list
+					// check if `potential_field_name` is in the optional field names list
 					for(auto& oarg: visitor.optional_field_names) {
 						if(oarg == potential_field_name) {
 							result = oarg;
@@ -662,8 +656,10 @@ namespace structopt {
 				if(next_index >= arguments.size()) {
 					return { T(), false };
 				}
+
 				T result;
 				bool success = true;
+
 				if constexpr(visit_struct::traits::is_visitable<T>::value) {
 					result = parse_nested_struct<T>(name);
 				} else if constexpr(std::is_enum<T>::value) {
@@ -703,27 +699,29 @@ namespace structopt {
 			template<typename T>
 			auto parse_optional_argument(const char* name) -> std::optional<T> {
 				next_index += 1;
-				std::optional<T> result;
-				if(next_index < arguments.size()) {
-					auto [value, success] = parse_argument<T>(name);
-					if(success) {
-						result = value;
-					} else {
-						throw structopt::exception("Error: failed to correctly "
-												   "parse optional argument `" +
-													   std::string{ name } + "`.",
-							visitor);
-					}
-				} else {
+
+				if(next_index > arguments.size()) {
+					throw structopt::exception(std::string("Error"), visitor);
+				}
+
+				if(next_index >= arguments.size()) {
 					throw structopt::exception("Error: expected value for optional argument `" +
 												   std::string{ name } + "`.",
 						visitor);
 				}
-				return result;
+
+				auto [value, success] = parse_argument<T>(name);
+				if(!success) {
+					throw structopt::exception("Error: failed to correctly "
+											   "parse optional argument `" +
+												   std::string{ name } + "`.",
+						visitor);
+				}
+
+				return value;
 			}
 
-			// Any field that can be constructed using std::stringstream
-			// Not container type
+			// Any field that can be constructed using std::stringstream Not container type
 			// Not a visitable type, i.e., a nested struct
 			template<typename T>
 			inline auto parse_single_argument(
@@ -770,10 +768,7 @@ namespace structopt {
 				argument_struct.visitor_.optional_field_names.push_back("help");
 				argument_struct.visitor_.optional_field_names.push_back("version");
 
-				if(!sub_command_invoked) {
-					sub_command_invoked				= true;
-					already_invoked_subcommand_name = name;
-				} else {
+				if(sub_command_invoked) {
 					// a sub-command has already been invoked
 					throw structopt::exception(
 						"Error: failed to invoke sub-command `" + std::string{ name } +
@@ -782,11 +777,13 @@ namespace structopt {
 						argument_struct.visitor_);
 				}
 
-				structopt::details::parser parser;
-				parser.next_index			   = 0;
-				parser.current_index		   = 0;
-				parser.double_dash_encountered = double_dash_encountered;
-				parser.visitor				   = argument_struct.visitor_;
+				sub_command_invoked				= true;
+				already_invoked_subcommand_name = name;
+
+				structopt::details::parser parser = { .next_index = 0,
+					.current_index								  = 0,
+					.double_dash_encountered					  = double_dash_encountered,
+					.visitor									  = argument_struct.visitor_ };
 
 				std::copy(arguments.begin() + next_index, // NOLINT (narrowing conversion)
 					arguments.end(),
@@ -930,9 +927,7 @@ namespace structopt {
 			void parse_tuple_element(
 				const char* name, std::size_t index, std::size_t size, T&& result) {
 				auto [value, success] = parse_argument<std::remove_reference_t<T>>(name);
-				if(success) {
-					result = value;
-				} else {
+				if(!success) {
 					if(next_index == arguments.size()) {
 						// end of arguments list failed to parse tuple <>. expected `size`
 						// arguments, `index` provided
@@ -948,6 +943,8 @@ namespace structopt {
 												   "} at index " + std::to_string(index) + ".",
 						visitor);
 				}
+
+				result = value;
 			}
 
 			// Tuple argument
@@ -970,10 +967,10 @@ namespace structopt {
 
 				// Parse from current till end
 				while(next_index < arguments.size()) {
-					const auto next = arguments[next_index];
-					if(is_optional_field(next) || std::string{ next } == "--" ||
+					const auto& next = arguments[next_index];
+					if(is_optional_field(next) || next == "--" ||
 						is_delimited_optional_argument(next).first) {
-						if(std::string{ next } == "--") {
+						if(next == "--") {
 							double_dash_encountered = true;
 							next_index += 1;
 						}
@@ -994,10 +991,10 @@ namespace structopt {
 				T result;
 				// Parse from current till end
 				while(next_index < arguments.size()) {
-					const auto next = arguments[next_index];
-					if(is_optional_field(next) || std::string{ next } == "--" ||
+					const auto& next = arguments[next_index];
+					if(is_optional_field(next) || next == "--" ||
 						is_delimited_optional_argument(next).first) {
-						if(std::string{ next } == "--") {
+						if(next == "--") {
 							double_dash_encountered = true;
 							next_index += 1;
 						}
@@ -1018,7 +1015,7 @@ namespace structopt {
 				T result;
 				// Parse from current till end
 				while(next_index < arguments.size()) {
-					const auto next = arguments[next_index];
+					const auto& next = arguments[next_index];
 					if(is_optional_field(next) || std::string{ next } == "--" ||
 						is_delimited_optional_argument(next).first) {
 						if(std::string{ next } == "--") {
@@ -1073,7 +1070,7 @@ namespace structopt {
 				}
 
 				if(current_index < arguments.size()) {
-					const auto next		  = arguments[current_index];
+					const auto& next	  = arguments[current_index];
 					const auto field_name = std::string{ name };
 
 					// Check if `next` is the start of a subcommand
@@ -1095,7 +1092,7 @@ namespace structopt {
 				}
 
 				if(current_index < arguments.size()) {
-					const auto next = arguments[current_index];
+					const auto& next = arguments[current_index];
 
 					if(is_optional(next)) {
 						return;
@@ -1109,14 +1106,14 @@ namespace structopt {
 						return;
 					}
 
-					const auto field_name = visitor.positional_field_names.front();
+					const auto& field_name = visitor.positional_field_names.front();
 
 					// // This will be parsed as a subcommand (nested struct)
 					// if (visitor.is_field_name(next) && next == field_name) {
 					//   return;
 					// }
 
-					if(field_name != std::string{ name }) {
+					if(field_name != name) {
 						// current field is not the one we want to parse
 						return;
 					}
@@ -1142,154 +1139,135 @@ namespace structopt {
 				if(next_index > current_index) {
 					current_index = next_index;
 				}
+				if(current_index >= arguments.size()) {
+					return;
+				}
 
-				if(current_index < arguments.size()) {
-					const auto next		  = arguments[current_index];
-					const auto field_name = std::string{ name };
+				const auto& next	  = arguments[current_index];
+				const auto field_name = std::string{ name };
 
-					if(next == "--" && !double_dash_encountered) {
-						double_dash_encountered = true;
+				if(next == "--" && !double_dash_encountered) {
+					double_dash_encountered = true;
+					next_index += 1;
+					return;
+				}
+
+				// if `next` looks like an optional argument (starts with `-` or `--`)
+				// see if you can find an optional field in the struct with a matching name
+				if(!double_dash_encountered && is_optional_field(next, field_name)) {
+
+					// this is an optional argument matching the current struct field
+					if constexpr(std::is_same<typename T::value_type, bool>::value) {
+						// It is a boolean optional argument. Does it have a default value?
+						// If yes, this is a FLAG argument, e.g,, "--verbose" will set it to true if
+						// the default value is false. No need to write "--verbose true"
+						if(value.has_value()) {
+							// The field already has a default value!
+							value = !value.value(); // simply toggle it
+							next_index += 1;
+						} else {
+							// boolean optional argument doesn't have a default value expect one
+							value = parse_optional_argument<typename T::value_type>(name);
+						}
+					} else {
+						// Not std::optional<bool> Parse the argument type <T>
+						value = parse_optional_argument<typename T::value_type>(name);
+					}
+				} else {
+					if(double_dash_encountered) {
+						return;
+					}
+
+					// maybe this is an optional argument that is delimited with '=' or ':' e.g.,
+					// --foo=bar or --foo:BAR
+					const auto [success, delimiter] = is_delimited_optional_argument(next);
+					if(next.size() > 1 && next[0] == '-' && success) {
+
+						const auto [lhs, rhs] = split_delimited_argument(delimiter, next);
+						// update next_index and return the parser will take care of the rest
+						// if `lhs` is an optional argument (i.e., maps to an optional field in the
+						// original struct), then insert into arguments list
+						auto potential_field_name = get_full_optional_field_name(lhs);
+						if(potential_field_name.has_value()) {
+							for(const auto& arg: { rhs, lhs }) {
+								const auto begin = arguments.begin();
+								// NOLINTNEXTLINE (narrowing conversion)
+								arguments.insert(begin + next_index + 1, arg);
+							}
+						}
+						// get past the current argument, e.g.,
+						// `--foo=bar`
 						next_index += 1;
 						return;
 					}
 
-					// if `next` looks like an optional argument
-					// i.e., starts with `-` or `--`
-					// see if you can find an optional field in the struct with
-					// a matching name
+					// A direct match of optional argument with field_name has not happened This
+					// _could_ be a combined argument e.g., -abc => -a, -b, and -c where each of
+					// these is a flag argument
+					std::vector<std::string> potential_combined_argument;
 
-					// check if the current argument looks like it could be this
-					// optional field
-					if(!double_dash_encountered && is_optional_field(next, field_name)) {
-
-						// this is an optional argument matching the current
-						// struct field
-						if constexpr(std::is_same<typename T::value_type, bool>::value) {
-							// It is a boolean optional argument
-							// Does it have a default value?
-							// If yes, this is a FLAG argument, e.g,,
-							// "--verbose" will set it to true if the default
-							// value is false No need to write "--verbose true"
-							if(value.has_value()) {
-								// The field already has a default value!
-								value = !value.value(); // simply toggle it
-								next_index += 1;
-							} else {
-								// boolean optional argument doesn't have a
-								// default value expect one
-								value = parse_optional_argument<typename T::value_type>(name);
-							}
-						} else {
-							// Not std::optional<bool>
-							// Parse the argument type <T>
-							value = parse_optional_argument<typename T::value_type>(name);
-						}
-					} else {
-						if(!double_dash_encountered) {
-
-							// maybe this is an optional argument that is
-							// delimited with '=' or ':' e.g., --foo=bar or
-							// --foo:BAR
-							if(next.size() > 1 && next[0] == '-') {
-								const auto [success, delimiter] =
-									is_delimited_optional_argument(next);
-								if(success) {
-									const auto [lhs, rhs] =
-										split_delimited_argument(delimiter, next);
-									// update next_index and return
-									// the parser will take care of the rest
-
-									// if `lhs` is an optional argument (i.e.,
-									// maps to an optional field in the original
-									// struct), then insert into arguments list
-									auto potential_field_name = get_full_optional_field_name(lhs);
-									if(potential_field_name.has_value()) {
-										for(const auto& arg: { rhs, lhs }) {
-											const auto begin = arguments.begin();
-											// NOLINTNEXTLINE (narrowing conversion)
-											arguments.insert(begin + next_index + 1, arg);
-										}
-									}
-									// get past the current argument, e.g.,
-									// `--foo=bar`
-									next_index += 1;
-									return;
-								}
-							}
-
-							// A direct match of optional argument with
-							// field_name has not happened This _could_ be a
-							// combined argument e.g., -abc => -a, -b, and -c
-							// where each of these is a flag argument
-							std::vector<std::string> potential_combined_argument;
-
-							if(!is_optional_field(next) && next[0] == '-' &&
-								(next.size() > 1 && next[1] != '-')) {
-								for(std::size_t i = 1; i < next.size(); i++) {
-									potential_combined_argument.push_back(
-										"-" + std::string(1, next[i]));
-								}
-							}
-
-							if(!potential_combined_argument.empty()) {
-								bool is_combined_argument = true;
-								for(auto& arg: potential_combined_argument) {
-									if(!is_optional_field(arg)) {
-										is_combined_argument = false;
-										// report error unrecognized option in combined argument
-									}
-								}
-
-								if(is_combined_argument) {
-									// check and make sure the current
-									// field_name is in `potential_combined_argument`
-									//
-									// Let's say the argument `next` is `-abc`
-									// the current field name is `b`
-									// 1. Split `-abc` into `-a`, `-b`, and `-c`
-									// 2. Check if `-b` is in the above list
-									//    1. If yes, consider this as a combined
-									//    argument
-									//       push the list of arguments (split
-									//       up) into `arguments`
-									//    2. If no, nothing to do here
-									bool field_name_matched = false;
-									for(auto& arg: potential_combined_argument) {
-										if(arg == "-" + std::string(1, field_name[0])) {
-											field_name_matched = true;
-										}
-									}
-
-									if(field_name_matched) {
-										// confirmed: this is a combined argument
-										// insert the individual options that
-										// make up the combined argument right
-										// after the combined argument e.g.,
-										// ""./main -abc" becomes "./main -abc
-										// -a -b -c" Once this is done,
-										// increment `next_index` so that the
-										// parser loop will service
-										// `-a`, `-b` and `-c` like any other
-										// optional arguments (flags and
-										// otherwise)
-										for(auto& arg: std::ranges::reverse_view(
-												potential_combined_argument)) {
-											if(next_index < arguments.size()) {
-												auto begin = arguments.begin();
-												// NOLINTNEXTLINE (narrowing conversion)
-												arguments.insert(begin + next_index + 1, arg);
-											} else {
-												arguments.push_back(arg);
-											}
-										}
-
-										// get past the current combined argument
-										next_index += 1;
-									}
-								}
-							}
+					if(!is_optional_field(next) && next[0] == '-' &&
+						(next.size() > 1 && next[1] != '-')) {
+						for(std::size_t i = 1; i < next.size(); i++) {
+							potential_combined_argument.push_back("-" + std::string(1, next[i]));
 						}
 					}
+
+					if(potential_combined_argument.empty()) {
+						// this is not a combined argument
+						return;
+					}
+
+					bool is_combined_argument = true;
+					for(auto& arg: potential_combined_argument) {
+						if(!is_optional_field(arg)) {
+							is_combined_argument = false;
+							// report error unrecognized option in combined argument
+						}
+					}
+
+					if(!is_combined_argument) {
+						// this is not a combined argument
+						return;
+					}
+
+					// check and make sure the current field_name is in
+					// `potential_combined_argument`
+					// Let's say the argument `next` is `-abc` the current field name is `b`
+					// 1. Split `-abc` into `-a`, `-b`, and `-c`
+					// 2. Check if `-b` is in the above list
+					//    1. If yes, consider this as a combined argument
+					//       push the list of arguments (split up) into `arguments`
+					//    2. If no, nothing to do here
+					bool field_name_matched = false;
+					for(auto& arg: potential_combined_argument) {
+						if(arg == "-" + std::string(1, field_name[0])) {
+							field_name_matched = true;
+						}
+					}
+
+					if(!field_name_matched) {
+						// name did not match
+						return;
+					}
+
+					// confirmed: this is a combined argument, insert the individual options that
+					// make up the combined argument right after the combined argument e.g.,
+					// "./main -abc" becomes "./main -a -b -c" Once this is done,
+					// increment `next_index` so that the parser loop will service
+					// `-a`, `-b` and `-c` like any other optional arguments (flags and otherwise)
+					for(const auto& arg: std::ranges::reverse_view(potential_combined_argument)) {
+						if(next_index < arguments.size()) {
+							auto begin = arguments.begin();
+							// NOLINTNEXTLINE (narrowing conversion)
+							arguments.insert(begin + next_index + 1, arg);
+						} else {
+							arguments.push_back(arg);
+						}
+					}
+
+					// get past the current combined argument
+					next_index += 1;
 				}
 			}
 		};
@@ -1310,38 +1288,41 @@ namespace structopt {
 				current_index = next_index;
 			}
 
-			if(current_index < arguments.size()) {
-				constexpr std::array<std::string_view, 4> true_strings{ "on", "yes", "1", "true" };
-				constexpr std::array<std::string_view, 4> false_strings{
-					"off", "no", "0", "false"
-				};
-				std::string current_argument = arguments[current_index];
-
-				// Convert argument to lower case
-				std::transform(current_argument.begin(),
-					current_argument.end(),
-					current_argument.begin(),
-					[](unsigned char chr) { return static_cast<char>(std::tolower(chr)); });
-
-				// Detect if argument is true or false
-				if(std::find(true_strings.begin(), true_strings.end(), current_argument) !=
-					true_strings.end()) {
-					return true;
-				}
-				if(std::find(false_strings.begin(), false_strings.end(), current_argument) !=
-					false_strings.end()) {
-					return false;
-				}
-				throw structopt::exception("Error: failed to parse boolean argument `" +
-											   std::string{ name } + "`." + " `" +
-											   current_argument + "`" + " is invalid.",
-					visitor);
+			if(current_index >= arguments.size()) {
 				return false;
 			}
-			return false;
+
+			static constexpr std::array<std::string_view, 4> true_strings{
+				"on", "yes", "1", "true"
+			};
+			static constexpr std::array<std::string_view, 4> false_strings{
+				"off", "no", "0", "false"
+			};
+
+			std::string current_argument = arguments[current_index];
+
+			// Convert argument to lower case
+			std::transform(current_argument.begin(),
+				current_argument.end(),
+				current_argument.begin(),
+				[](unsigned char chr) { return static_cast<char>(std::tolower(chr)); });
+
+			// Detect if argument is true or false
+			if(std::find(true_strings.begin(), true_strings.end(), current_argument) !=
+				true_strings.end()) {
+				return true;
+			}
+			if(std::find(false_strings.begin(), false_strings.end(), current_argument) !=
+				false_strings.end()) {
+				return false;
+			}
+			throw structopt::exception("Error: failed to parse boolean argument `" +
+										   std::string{ name } + "`." + " `" + current_argument +
+										   "`" + " is invalid.",
+				visitor);
 		}
 
-	} // namespace details
+	}
 
 	class app {
 		details::visitor visitor;
@@ -1354,11 +1335,12 @@ namespace structopt {
 			visitor(name, version, help) {}
 
 		template<typename T>
-		auto parse(const std::vector<std::string>& arguments) -> T {
+		// NOLINTNEXTLINE
+		[[nodiscard]] auto parse(int argc, char* argv[]) -> T {
+			std::vector<std::string> arguments{ argv, argv + argc };
 			T argument_struct = T();
 
-			// Visit the struct and save flag, optional and positional field
-			// names
+			// Visit the struct and save flag, optional and positional field names
 			visit_struct::for_each(argument_struct, visitor);
 
 			// add `help` and `version` optional arguments
@@ -1366,9 +1348,7 @@ namespace structopt {
 			visitor.optional_field_names.emplace_back("version");
 
 			// Construct the argument parser
-			structopt::details::parser parser;
-			parser.visitor	 = visitor;
-			parser.arguments = arguments;
+			structopt::details::parser parser = { .visitor = visitor, .arguments = arguments };
 
 			for(std::size_t i = 1; i < parser.arguments.size(); i++) {
 				parser.current_index = i;
@@ -1415,14 +1395,6 @@ namespace structopt {
 			}
 
 			return argument_struct;
-		}
-
-		template<typename T>
-		// NOLINTNEXTLINE
-		auto parse(int argc, char* argv[]) -> T {
-			std::vector<std::string> arguments;
-			std::copy(argv, argv + argc, std::back_inserter(arguments));
-			return parse<T>(arguments);
 		}
 
 		[[nodiscard]] auto help() const -> std::string {
