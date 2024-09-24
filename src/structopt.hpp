@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2024 Eshan
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #pragma once
 
 #include "third_party/magic_enum.hpp"
@@ -17,6 +39,7 @@
 #include <optional>
 #include <ostream>
 #include <queue>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <stack>
@@ -84,17 +107,21 @@ namespace structopt {
 		struct is_stl_container<std::queue<Args...>> : std::true_type {};
 		template<typename... Args>
 		struct is_stl_container<std::priority_queue<Args...>> : std::true_type {};
-	} // namespace is_stl_container_impl
+	}
 
 	template<class T>
 	struct is_array : std::is_array<T> {};
+
 	template<class T, std::size_t N>
 	struct is_array<std::array<T, N>> : std::true_type {};
+
 	// optional:
 	template<class T>
 	struct is_array<T const> : is_array<T> {};
+
 	template<class T>
 	struct is_array<T volatile> : is_array<T> {};
+
 	template<class T>
 	struct is_array<T volatile const> : is_array<T> {};
 
@@ -388,7 +415,7 @@ namespace structopt {
 			}
 		};
 
-	} // namespace details
+	}
 
 	class exception : public std::exception {
 		std::string what_;
@@ -472,8 +499,7 @@ namespace structopt {
 					// remove first dash
 					maybe_kebab_case.erase(0, 1);
 					if(maybe_kebab_case[0] == '-') {
-						// there is a second leading dash
-						// remove it
+						// there is a second leading dash remove it
 						maybe_kebab_case.erase(0, 1);
 					}
 					std::replace(maybe_kebab_case.begin(), maybe_kebab_case.end(), '-', '_');
@@ -511,10 +537,9 @@ namespace structopt {
 				return result;
 			}
 
-			// checks if the next argument is a delimited optional field
-			// e.g., -std=c++17, where std matches a field name
-			// and it is delimited by one of the two allowed delimiters: `=` and `:`
-			// if true, the return value includes the delimiter that was used
+			// checks if the next argument is a delimited optional field e.g., -std=c++17, where std
+			// matches a field name and it is delimited by one of the two allowed delimiters: `=`
+			// and `:` if true, the return value includes the delimiter that was used
 			auto is_delimited_optional_argument(const std::string& next) -> std::pair<bool, char> {
 				bool success   = false;
 				char delimiter = '\0';
@@ -1247,10 +1272,8 @@ namespace structopt {
 										// `-a`, `-b` and `-c` like any other
 										// optional arguments (flags and
 										// otherwise)
-										for(auto it = potential_combined_argument.rbegin();
-											it != potential_combined_argument.rend();
-											++it) {
-											auto& arg = *it;
+										for(auto& arg: std::ranges::reverse_view(
+												potential_combined_argument)) {
 											if(next_index < arguments.size()) {
 												auto begin = arguments.begin();
 												// NOLINTNEXTLINE (narrowing conversion)
