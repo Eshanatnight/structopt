@@ -176,3 +176,12 @@ project "tuple_arguments"
     objdir("build/bin-int/" .. outputdir .. "/%{prj.name}")
     includedirs { "./src" }
     files { "./examples/tuple_arguments.cpp"}
+
+project "ristricted_arguments"
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++20"
+    targetdir ("build/bin/" .. outputdir .. "/%{prj.name}")
+    objdir("build/bin-int/" .. outputdir .. "/%{prj.name}")
+    includedirs { "./src" }
+    files { "./examples/ristricted.cpp"}

@@ -1,80 +1,76 @@
 # Structopt
 
-Parse command line arguments by defining a struct
+Parse command line arguments by defining a struct.
 
 ## Quick Start
+
+Create a `structopt::app` and parse the command line arguments into the `Options` struct:
 
 ```c++
 #include "structopt.hpp"
 
 struct Options {
-   // positional argument
-   //   e.g., ./main <file>
-   std::string config_file;
+ // positional argument
+ //   e.g., ./main <file>
+ std::string config_file;
 
-   // optional argument
-   //   e.g., -b "192.168.5.3"
-   //   e.g., --bind_address "192.168.5.3"
-   //
-   // options can be delimited with `=` or `:`
-   // note: single dash (`-`) is enough for short & long option
-   //   e.g., -bind_address=localhost
-   //   e.g., -b:192.168.5.3
-   //
-   // the long option can also be provided in kebab case:
-   //   e.g., --bind-address 192.168.5.3
-   std::optional<std::string> bind_address;
+ // optional argument
+ //   e.g., `-b "192.168.5.3"` or `--bind_address "192.168.5.3"`
+ // options can be delimited with `=` or `:`
+ // note: single dash (`-`) is enough for short & long option
+ //   e.g., `-bind_address=localhost` or `-b:192.168.5.3`
+ // the long option can also be provided in kebab case:
+ //   e.g., `--bind-address 192.168.5.3`
+ std::optional<std::string> bind_address;
 
-   // flag argument
-   // Use `std::optional<bool>` and provide a default value.
-   //   e.g., -v
-   //   e.g., --verbose
-   //   e.g., -verbose
-   std::optional<bool> verbose = false;
+ // flag argument
+ // Use `std::optional<bool>` and provide a default value.
+ //   e.g., `-v` or `--verbose` or `-verbose`
+ std::optional<bool> verbose = false;
 
-   // directly define and use enum classes to limit user choice
-   //   e.g., --log-level debug
-   //   e.g., -l error
-   enum class LogLevel { debug, info, warn, error, critical };
-   std::optional<LogLevel> log_level = LogLevel::info;
+ // directly define and use enum classes to limit user choice
+ //   e.g., `--log-level` debug or `-l error`
+ enum class LogLevel {
+  debug,
+  info,
+  warn,
+  error,
+  critical
+ };
+ std::optional<LogLevel> log_level = LogLevel::info;
 
-   // pair argument
-   // e.g., -u <first> <second>
-   // e.g., --user <first> <second>
-   std::optional<std::pair<std::string, std::string>> user;
+ // pair argument
+ // e.g., `-u <first> <second>` or `--user <first> <second>`
+ std::optional<std::pair<std::string, std::string>> user;
 
-   // use containers like std::vector
-   // to collect "remaining arguments" into a list
-   std::vector<std::string> files;
+ // use containers like std::vector
+ // to collect "remaining arguments" into a list
+ std::vector<std::string> files;
 };
+
 STRUCTOPT(Options, config_file, bind_address, verbose, log_level, user, files);
-```
 
-Create a `structopt::app` and parse the command line arguments
-into the `Options` struct:
+int main(int argc, char* argv[]) {
 
-```cpp
-int main(int argc, char *argv[]) {
+ try {
 
-  try {
+  // Line of code that does all the work:
+  auto options = structopt::app("my_app").parse<Options>(argc, argv);
 
-    // Line of code that does all the work:
-    auto options = structopt::app("my_app").parse<Options>(argc, argv);
+  // Print out parsed arguments:
 
-    // Print out parsed arguments:
+  // std::cout << "config_file  = "
+  //           << options.config_file << "\n";
+  // std::cout << "bind_address = "
+  //           << options.bind_address.value_or("not provided") << "\n";
+  // std::cout << "verbose      = "
+  //            << std::boolalpha << options.verbose.value() << "\n";
+  // ...
 
-    // std::cout << "config_file  = "
-    //           << options.config_file << "\n";
-    // std::cout << "bind_address = "
-    //           << options.bind_address.value_or("not provided") << "\n";
-    // std::cout << "verbose      = "
-    //            << std::boolalpha << options.verbose.value() << "\n";
-    // ...
-
-  } catch (structopt::exception& e) {
-    std::cout << e.what() << "\n";
-    std::cout << e.help();
-  }
+ } catch(structopt::exception& e) {
+  std::cout << e.what() << "\n";
+  std::cout << e.help();
+ }
 }
 ```
 
@@ -109,6 +105,7 @@ files        = { file1.txt file3.txt file4.txt }
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Building Samples and Tests](#building-samples-and-tests)
   - [Positional Arguments](#positional-arguments)
   - [Optional Arguments](#optional-arguments)
     - [Double dash (`--`) Argument](#double-dash----argument)
@@ -122,18 +119,46 @@ files        = { file1.txt file3.txt file4.txt }
     - [Floating point Literals](#floating-point-literals)
       - [Nested Structures (Sub-commands)](#nested-structures)
       - [Sub-Commands, Vector Arguments, and Delimited Positional Arguments](#sub-commands-vector-arguments-and-delimited-positional-arguments)
+  - [Special Cases](#special-cases)
   - [Printing Help](#printing-help)
   - [Printing CUSTOM Help](#printing-custom-help)
 
 ## Getting Started
 
 `structopt` is a header-only library. Just add `src/` to your _include_directories_ and you should be good to go.
+Or if you want to use cmake.
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  structopt
+  GIT_REPOSITORY https://github.com/Eshanatnight/structopt
+  GIT_TAG        main
+)
+
+fetchcontent_makeavailable(structopt)
+set(STRUCTOPT_SRC ${structopt_SOURCE_DIR}/src)
+
+#...
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${STRUCTOPT_SRC})
+```
+
+## Building Samples and Tests
+
+```bash
+git clone https://github.com/Eshanatnight/structopt
+cd structopt
+mkdir build
+cmake -B build
+cmake --build build
+```
 
 ### Positional Arguments
 
-Here's an example of two positional arguments:
-`input_file` and `output_file`. `input_file` is expected to be the first argument
-and `output_file` is expected to be the second argument
+Here's an example of two positional arguments: `input_file` and `output_file`.
+`input_file` is expected to be the first argument and `output_file` is expected to be the second argument
 
 ```cpp
 #include "structopt.hpp"
@@ -145,8 +170,6 @@ struct FileOptions {
   std::string output_file;
 };
 STRUCTOPT(FileOptions, input_file, output_file);
-
-
 
 int main(int argc, char *argv[]) {
 
@@ -190,19 +213,16 @@ use `std::optional` in the options struct like below.
 
 struct GccOptions {
   // language standard
-  // e.g., -std=c++17
-  // e.g., --std c++20
+  // e.g., `-std=c++17` or `--std c++20`
   std::optional<std::string> std = "c++11";
 
-  // verbosity enabled with `-v` or `--verbose`
-  // or `-verbose`
+  // verbosity enabled with `-v` or `--verbose` or `-verbose`
   std::optional<bool> verbose = false;
 
   // enable all warnings with `-Wall`
   std::optional<bool> Wall = false;
 
-  // produce only the compiled code
-  // e.g., gcc -C main.c
+  // produce only the compiled code e.g., gcc -C main.c
   std::optional<bool> Compile = false;
 
   // produce output with `-o <exec_name>`
@@ -212,13 +232,11 @@ struct GccOptions {
 };
 STRUCTOPT(GccOptions, std, verbose, Wall, Compile, output, input_file);
 
-
 int main(int argc, char *argv[]) {
   try {
     auto options = structopt::app("gcc").parse<GccOptions>(argc, argv);
 
     // Print parsed arguments
-
     std::cout << "std        : " << options.std.value() << "\n";
     std::cout << "verbose    : " << std::boolalpha << options.verbose.value() << "\n";
     std::cout << "Wall       : " << std::boolalpha << options.Wall.value() << "\n";
@@ -232,7 +250,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-**_NOTE_** `structopt` supports two option delimiters, `=` and `:` for optional arguments. This is meaningful and commonly used in single-valued optional arguments, e.g., `--std=c++20`.
+> **_NOTE_** `structopt` supports two option delimiters, `=` and `:` for optional arguments. This is meaningful and commonly used in single-valued optional arguments, e.g., `--std=c++20`.
 
 ```bash
 foo@bar:~$ ./main -C main.cpp
@@ -260,7 +278,7 @@ Output     : main
 Input file : main.cpp
 ```
 
-**_NOTE_** In summary, for a field in your struct named `bind_address`, the following are all legal ways to provide a value:
+> **_NOTE_** In summary, for a field in your struct named `bind_address`, the following are all legal ways to provide a value:
 
 - Short form:
   - `-b <value>`
@@ -303,10 +321,7 @@ struct GrepOptions {
 };
 STRUCTOPT(GrepOptions, v, search, pathspec);
 
-
-
 int main(int argc, char *argv[]) {
-
   try {
     auto options = structopt::app("my_app").parse<GrepOptions>(argc, argv);
 
@@ -321,7 +336,6 @@ int main(int argc, char *argv[]) {
     std::cout << e.what();
     std::cout << e.help();
   }
-
 }
 ```
 
@@ -340,9 +354,9 @@ Pathspec : bar.txt
 
 Flag arguments are `std::optional<bool>` with a default value.
 
-**_NOTE_** The default value here is important. It is not a flag if a default value isn't provided. It will simply be an optional argument.
-
-**_NOTE_** If `--verbose` is a flag argument with a default value of `false`, then providing the argument will set it to `true`. If `--verbose` does not have a default value, then `structopt` will expect the user to provide a value, e.g., `--verbose true`.
+> **_NOTE_**
+> 1. The default value here is **important**. It is not a flag if a default value isn't provided. It will simply be an optional argument.
+> 2. If `--verbose` is a flag argument with a default value of `false`, then providing the argument will set it to `true`. If `--verbose` does not have a default value, then `structopt` will expect the user to provide a value, e.g., `--verbose true`.
 
 ```cpp
 #include "structopt.hpp"
@@ -350,12 +364,9 @@ Flag arguments are `std::optional<bool>` with a default value.
 struct Options {
   // verbosity flag
   // -v, --verbose
-  // remember to provide a default value
-  std::optional<bool> verbose = false;
+  std::optional<bool> verbose = false; // remember to provide a default value
 };
 STRUCTOPT(Options, verbose);
-
-
 
 int main(int argc, char *argv[]) {
   auto options = structopt::app("my_app").parse<Options>(argc, argv);
@@ -391,25 +402,19 @@ struct StyleOptions {
 };
 STRUCTOPT(StyleOptions, color);
 
-
-
 int main(int argc, char *argv[]) {
 
   try {
     auto options = structopt::app("my_app").parse<StyleOptions>(argc, argv);
 
     // Use parsed argument `options.color`
-
     if (options.color == StyleOptions::Color::red) {
         std::cout << "#ff0000\n";
-    }
-    else if (options.color == StyleOptions::Color::blue) {
+    } else if (options.color == StyleOptions::Color::blue) {
         std::cout << "#0000ff\n";
-    }
-    else if (options.color == StyleOptions::Color::green) {
+    } else if (options.color == StyleOptions::Color::green) {
         std::cout << "#00ff00\n";
     }
-
   } catch (structopt::exception& e) {
     std::cout << e.what() << "\n";
     std::cout << e.help();
@@ -454,10 +459,7 @@ struct CalculatorOptions {
 };
 STRUCTOPT(CalculatorOptions, input);
 
-
-
 int main(int argc, char *argv[]) {
-
   try {
     auto options = structopt::app("my_app").parse<CalculatorOptions>(argc, argv);
 
@@ -484,7 +486,6 @@ int main(int argc, char *argv[]) {
     std::cout << e.what();
     std::cout << e.help();
   }
-
 }
 ```
 
@@ -515,12 +516,12 @@ ARGS:
 `structopt` supports gathering "remaining" arguments at the end of the command, e.g., for use in a compiler:
 
 ```bash
-$ compiler file1 file2 file3
+gcc file1 file2 file3
 ```
 
 Do this by using an `std::vector<T>` (or other STL containers with `.push_back()`, e.g, `std::deque` or `std::list`).
 
-**_NOTE_** Vector arguments have a cardinality of `0..*`, i.e., zero or more arguments. Unlike array types, you can provide zero arguments to a vector and `structopt` will (try to) not complain.
+> **_NOTE_** Vector arguments have a cardinality of `0..*`, i.e., zero or more arguments. Unlike array types, you can provide zero arguments to a vector and `structopt` will (try to) not complain.
 
 ```cpp
 #include "structopt.hpp"
@@ -535,8 +536,6 @@ struct CompilerOptions {
   std::vector<std::string> files{};
 };
 STRUCTOPT(CompilerOptions, std, files);
-
-
 
 int main(int argc, char *argv[]) {
   try {
@@ -554,7 +553,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-**_NOTE_** Notice below that the act of gathering remaining arguments is arrested as soon as an optional argument is detected. See the output of `./main file1.cpp file2.cpp --std c++17` below. Notice that `--std=c++17` is not part of the vector. This is because `--std` is a valid optional argument.
+> **_NOTE_** Notice below that the act of gathering remaining arguments is arrested as soon as an optional argument is detected. See the output of `./main file1.cpp file2.cpp --std c++17` below. Notice that `--std=c++17` is not part of the vector. This is because `--std` is a valid optional argument.
 
 ```bash
 foo@bar:~$ ./main
@@ -592,14 +591,11 @@ struct Options {
 };
 STRUCTOPT(Options, a, b, c);
 
-
-
 int main(int argc, char *argv[]) {
   try {
     auto options = structopt::app("my_app").parse<Options>(argc, argv);
 
     // Print parsed arguments:
-
     std::cout << std::boolalpha << "a = " << options.a.value()
               << ", b = " << options.b.value() << "\n";
     if (options.c.has_value()) {
@@ -737,10 +733,7 @@ STRUCTOPT(Git::Init, name);
 STRUCTOPT(Git, config, init);
 
 
-
 int main(int argc, char *argv[]) {
-
-
   try {
     auto options = structopt::app("my_app").parse<Git>(argc, argv);
 
@@ -755,7 +748,6 @@ int main(int argc, char *argv[]) {
       std::cout << "You invoked `git init`:\n";
       std::cout << "Repository name : " << options.init.name << "\n";
     }
-
 
   } catch (structopt::exception& e) {
     std::cout << e.what() << "\n";
@@ -779,8 +771,6 @@ foo@bar:~$ ./main init my_repo
 You invoked `git init`:
 Repository name : my_repo
 
-
-
 foo@bar:~$ ./main -h
 
 USAGE: my_app [OPTIONS] [SUBCOMMANDS]
@@ -792,9 +782,6 @@ OPTIONS:
 SUBCOMMANDS:
     config
     init
-
-
-
 
 foo@bar:~$ ./main config -h
 
@@ -810,9 +797,6 @@ OPTIONS:
 ARGS:
     name_value_pair
 
-
-
-
 foo@bar:~$ ./main init -h
 
 USAGE: init [OPTIONS] name
@@ -825,9 +809,10 @@ ARGS:
     name
 ```
 
-**_NOTE_** Notice in the above stdout that the `-h` help option supports printing help both at the top-level struct and at the sub-command level.
-
-**_NOTE_** `structopt` does not allow to invoke multiple sub-commands. If one has already been invoked, you will see the following error:
+> **_NOTE_**
+>
+> 1. Notice in the above stdout that the `-h` help option supports printing help both at the top-level struct and at the sub-command level.
+> 2. `structopt` does not allow to invoke multiple sub-commands. If one has already been invoked, you will see the following error:
 
 ```bash
 foo@bar:~$ ./main config user.name "John Doe" init my_repo
@@ -860,23 +845,16 @@ struct CommandOptions {
 STRUCTOPT(CommandOptions::Sed, trace, args, pattern, file);
 STRUCTOPT(CommandOptions, sed);
 
-
-
 int main(int argc, char *argv[]) {
 
   auto app = structopt::app("my_app");
-
   try {
-
     auto options = app.parse<CommandOptions>(argc, argv);
-
     if (options.sed.has_value()) {
       // sed has been invoked
-
       if (options.sed.trace == true) {
         std::cout << "Trace enabled!\n";
       }
-
       std::cout << "Args    : ";
       for (auto& a : options.sed.args) std::cout << a << " ";
       std::cout << "\n";
@@ -886,7 +864,6 @@ int main(int argc, char *argv[]) {
     else {
       std::cout << app.help();
     }
-
   } catch (structopt::exception &e) {
     std::cout << e.what() << "\n";
     std::cout << e.help();
@@ -906,13 +883,58 @@ OPTIONS:
 SUBCOMMANDS:
     sed
 
-
-
 foo@bar:~$ ./main sed --trace X=1 Y=2 Z=3 -- 's/foo/bar/g' foo.txt
 Trace enabled!
 Args    : X=1 Y=2 Z=3
 Pattern : s/foo/bar/g
 File    : foo.txt
+```
+
+### Special Cases
+
+For cases where an argument, flag or sub-command needs to be the same as a reserved keyword in C++, you can use the convention of appending an underscore (`_`) to the keyword. Structopt will automatically remove the underscore when parsing the argument
+
+```cpp
+struct Cli {
+ struct New : structopt::sub_command {
+  std::string projectName;
+ };
+
+ // sub commands
+ New new_;
+};
+
+STRUCTOPT(Cli::New, projectName);
+STRUCTOPT(Cli, new_);
+
+int main(int argc, char** argv) {
+ try {
+ const auto cli = structopt::app("main").parse<Cli>(argc, argv);
+
+ // Print out parsed arguments:
+  std::cout << "New project name: " << cli.new_.projectName << "\n";
+
+ } catch (const structopt::exception &e) {
+  std::cerr << e.what() << std::endl;
+  std::cerr << e.help();
+ }
+ return 0;
+}
+```
+
+```bash
+foo@bar:~$ ./main new hello_world
+New project name: hello_world
+
+foo@bar:~$ ./main --help
+USAGE: plus [OPTIONS] [SUBCOMMANDS]
+
+OPTIONS:
+    -h, --help <help>
+    -v, --version <version>
+
+SUBCOMMANDS:
+    new
 ```
 
 ### Printing Help
@@ -937,8 +959,6 @@ struct Options {
   std::vector<std::string> files;
 };
 STRUCTOPT(Options, input_file, output_file, bind_address, files);
-
-
 
 int main(int argc, char *argv[]) {
   auto options = structopt::app("my_app", "1.0.3").parse<Options>(argc, argv);
@@ -1001,11 +1021,5 @@ foo@bar:~$ ./main -h
 Usage: ./my_app input_file output_file [--bind-address BIND_ADDRESS] [files...]
 ```
 
-## Building Samples and Tests
+See the [examples](./examples) directory for more examples.
 
-```bash
-git clone https://github.com/Eshanatnight/structopt
-cd structopt
-premake5 <generator>
-make
-```
