@@ -311,7 +311,7 @@ namespace structopt {
 				// how would we identify a keyword? use some sort of convestion
 				// say the var name needs to end with `_` char
 
-				if(_name.ends_with('_')) {
+				if(_name.back() == '_') {
 					_name.pop_back();
 				}
 				field_names.push_back(_name);
@@ -462,8 +462,12 @@ namespace structopt {
 
 	public:
 
-		[[nodiscard]] auto has_value() const -> bool {
+		[[nodiscard]] constexpr auto has_value() const noexcept -> bool {
 			return invoked_.has_value();
+		}
+
+		[[nodiscard]] explicit constexpr operator bool() const noexcept {
+			return has_value();
 		}
 	};
 
@@ -1256,7 +1260,11 @@ namespace structopt {
 					// "./main -abc" becomes "./main -a -b -c" Once this is done,
 					// increment `next_index` so that the parser loop will service
 					// `-a`, `-b` and `-c` like any other optional arguments (flags and otherwise)
-					for(const auto& arg: std::ranges::reverse_view(potential_combined_argument)) {
+
+					for(auto iter = potential_combined_argument.rbegin();
+						iter != potential_combined_argument.rend();
+						++iter) {
+						const auto& arg = *iter;
 						if(next_index < arguments.size()) {
 							auto begin = arguments.begin();
 							// NOLINTNEXTLINE (narrowing conversion)

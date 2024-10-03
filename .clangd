@@ -3,4 +3,4 @@
 CompileFlags:
   Add:
     - -ferror-limit=50000
-    - -std=c++20
+    - -std=c++17
