@@ -142,29 +142,29 @@ namespace structopt {
 			return true;
 		}
 
-		inline auto string_to_kebab(std::string str) -> std::string {
+		static inline auto string_to_kebab(std::string str) -> std::string {
 			// Generate kebab case and present as option
 			details::string_replace(str, "_", "-");
 			return str;
 		}
 
-		static inline auto is_binary_notation(std::string const& input) -> bool {
+		static inline auto is_binary_notation(std::string_view input) -> bool {
 			return input.compare(0, 2, "0b") == 0 && input.size() > 2 &&
 				   input.find_first_not_of("01", 2) == std::string::npos;
 		}
 
-		static inline auto is_hex_notation(std::string const& input) -> bool {
+		static inline auto is_hex_notation(std::string_view input) -> bool {
 			return input.compare(0, 2, "0x") == 0 && input.size() > 2 &&
 				   input.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos;
 		}
 
-		static inline auto is_octal_notation(std::string const& input) -> bool {
+		static inline auto is_octal_notation(std::string_view input) -> bool {
 			return input.compare(0, 1, "0") == 0 && input.size() > 1 &&
 				   input.find_first_not_of("01234567", 1) == std::string::npos;
 		}
 
 		static inline auto is_expo_notation(
-			const std::string& input, std::size_t left, std::size_t right) -> bool {
+			std::string_view input, std::size_t left, std::size_t right) -> bool {
 			bool dot_or_exp = false;
 
 			for(; left <= right; left++) {
@@ -206,7 +206,7 @@ namespace structopt {
 			return true;
 		}
 
-		static inline auto is_decimal_notation(const std::string& input) -> bool {
+		static inline auto is_decimal_notation(std::string_view input) -> bool {
 			std::size_t left  = 0;
 			std::size_t right = input.length() - 1;
 
@@ -231,7 +231,7 @@ namespace structopt {
 			return is_expo_notation(input, left, right);
 		}
 
-		static inline auto is_valid_number(const std::string& input) -> bool {
+		static inline auto is_valid_number(std::string_view input) -> bool {
 			if(is_binary_notation(input) || is_hex_notation(input) || is_octal_notation(input)) {
 				return true;
 			}
@@ -323,7 +323,7 @@ namespace structopt {
 				nested_struct_field_names.push_back(_name);
 			}
 
-			auto is_field_name(const std::string& field_name) -> bool {
+			auto is_field_name(std::string_view field_name) -> bool {
 				return std::find(field_names.begin(), field_names.end(), field_name) !=
 					   field_names.end();
 			}
@@ -358,13 +358,17 @@ namespace structopt {
 						for(const auto& flag: flag_field_names) {
 
 							// Generate kebab case and present as flag
-							auto kebab_case = details::string_to_kebab(flag);
-							std::string long_form;
-							if(kebab_case != flag) {
-								long_form = kebab_case;
-							} else {
-								long_form = flag;
-							}
+							// TODO: moving the flag removes the allocation
+							auto kebab_case				= details::string_to_kebab(flag);
+							const std::string long_form = [&kebab_case, flag] {
+								std::string str;
+								if(kebab_case != flag) {
+									str = kebab_case;
+								} else {
+									str = flag;
+								}
+								return str;
+							}();
 
 							out_stream << "    -" << flag[0] << ", --" << flag << "\n";
 
@@ -479,15 +483,25 @@ namespace structopt {
 	namespace details {
 
 		struct parser {
-			structopt::details::visitor visitor;
-			std::vector<std::string> arguments;
+			using DetailsVisitor = structopt::details::visitor;
+			DetailsVisitor visitor;
+			std::vector<std::string_view> arguments;
 			std::size_t current_index{ 1 };
 			std::size_t next_index{ 1 };
 			bool double_dash_encountered{ false }; // "--" option-argument delimiter
 			bool sub_command_invoked{ false };
 			std::string already_invoked_subcommand_name;
 
-			auto is_optional(const std::string& name) -> bool {
+			explicit parser(DetailsVisitor visitor_, std::vector<std::string_view> args) :
+				visitor(std::move(visitor_)), arguments(std::move(args)) {}
+
+			// NOLINTNEXTLINE easily swappable
+			explicit parser(std::size_t next_idx, std::size_t curr_idx, bool double_dash_encountered,
+				DetailsVisitor visitor_) :
+				visitor(std::move(visitor_)), next_index(next_idx), current_index(curr_idx),
+				double_dash_encountered(double_dash_encountered) {}
+
+			auto is_optional(std::string_view name) -> bool {
 				if(double_dash_encountered || is_valid_number(name)) {
 					return false;
 				}
@@ -500,9 +514,9 @@ namespace structopt {
 			}
 
 			static auto is_kebab_case(
-				const std::string& next, const std::string& field_name) -> bool { // NOLINT
+				std::string_view next, std::string_view field_name) -> bool { // NOLINT
 				bool result			  = false;
-				auto maybe_kebab_case = next;
+				auto maybe_kebab_case = std::string(next);
 				if(maybe_kebab_case.size() > 1 && maybe_kebab_case[0] == '-') {
 					// remove first dash
 					maybe_kebab_case.erase(0, 1);
@@ -519,7 +533,7 @@ namespace structopt {
 			}
 
 			static auto is_optional_field(
-				const std::string& next, const std::string& field_name) -> bool {
+				std::string_view next, const std::string& field_name) -> bool {
 				bool result = false;
 				if(next == "-" + field_name || next == "--" + field_name ||
 					next == "-" + std::string(1, field_name[0]) ||
@@ -530,7 +544,7 @@ namespace structopt {
 				return result;
 			}
 
-			auto is_optional_field(const std::string& next) -> bool {
+			auto is_optional_field(std::string_view next) -> bool {
 				if(!is_optional(next)) {
 					return false;
 				}
@@ -548,7 +562,7 @@ namespace structopt {
 			// checks if the next argument is a delimited optional field e.g., -std=c++17, where std
 			// matches a field name and it is delimited by one of the two allowed delimiters: `=`
 			// and `:` if true, the return value includes the delimiter that was used
-			auto is_delimited_optional_argument(const std::string& next) -> std::pair<bool, char> {
+			auto is_delimited_optional_argument(std::string_view next) -> std::pair<bool, char> {
 				bool success   = false;
 				char delimiter = '\0';
 
@@ -584,7 +598,7 @@ namespace structopt {
 			}
 
 			static auto split_delimited_argument(
-				char delimiter, const std::string& next) -> std::pair<std::string, std::string> {
+				char delimiter, std::string_view next) -> std::pair<std::string, std::string> {
 				std::string key;
 				std::string value;
 				bool delimiter_found = false;
@@ -735,7 +749,7 @@ namespace structopt {
 			template<typename T>
 			inline auto parse_single_argument(
 				const char*) -> std::enable_if_t<!visit_struct::traits::is_visitable<T>::value, T> {
-				std::string argument = arguments[next_index];
+				auto argument = std::string(arguments[next_index].data());
 				std::istringstream is_stream(argument);
 				T result;
 
@@ -788,11 +802,9 @@ namespace structopt {
 
 				sub_command_invoked				= true;
 				already_invoked_subcommand_name = name;
+				auto visitor_					= argument_struct.visitor_;
 
-				structopt::details::parser parser = { .next_index = 0,
-					.current_index								  = 0,
-					.double_dash_encountered					  = double_dash_encountered,
-					.visitor									  = argument_struct.visitor_ };
+				structopt::details::parser parser ( 0,0,double_dash_encountered, visitor_ );
 
 				std::copy(arguments.begin() + next_index, // NOLINT (narrowing conversion)
 					arguments.end(),
@@ -855,14 +867,14 @@ namespace structopt {
 					auto [value, success] = parse_argument<T1>(name);
 					if(success) {
 						result.first = value;
+					} else if(next_index == arguments.size()) {
+
+						// end of arguments list first argument not provided
+						throw structopt::exception("Error: failed to correctly parse the pair `" +
+													   std::string{ name } +
+													   "`. Expected 2 arguments, 0 provided.",
+							visitor);
 					} else {
-						if(next_index == arguments.size()) {
-							// end of arguments list first argument not provided
-							throw structopt::exception(
-								"Error: failed to correctly parse the pair `" +
-									std::string{ name } + "`. Expected 2 arguments, 0 provided.",
-								visitor);
-						}
 						throw structopt::exception("Error: failed to correctly parse first "
 												   "element of pair `" +
 													   std::string{ name } + "`",
@@ -874,16 +886,14 @@ namespace structopt {
 					auto [value, success] = parse_argument<T2>(name);
 					if(success) {
 						result.second = value;
+					} else if(next_index == arguments.size()) {
+
+						// end of arguments list second argument not provided
+						throw structopt::exception("Error: failed to correctly parse the pair `" +
+													   std::string{ name } +
+													   "`. Expected 2 arguments, only 1 provided.",
+							visitor);
 					} else {
-						if(next_index == arguments.size()) {
-							// end of arguments list
-							// second argument not provided
-							throw structopt::exception(
-								"Error: failed to correctly parse the pair `" +
-									std::string{ name } +
-									"`. Expected 2 arguments, only 1 provided.",
-								visitor);
-						}
 						throw structopt::exception("Error: failed to correctly parse second "
 												   "element of pair `" +
 													   std::string{ name } + "`",
@@ -976,7 +986,7 @@ namespace structopt {
 
 				// Parse from current till end
 				while(next_index < arguments.size()) {
-					const auto& next = arguments[next_index];
+					auto next = arguments[next_index];
 					if(is_optional_field(next) || next == "--" ||
 						is_delimited_optional_argument(next).first) {
 						if(next == "--") {
@@ -1118,7 +1128,7 @@ namespace structopt {
 						// We're not looking to save any more positional fields all of them already
 						// have a value
 						throw structopt::exception(
-							"Error: unexpected argument '" + next + "'", visitor);
+							"Error: unexpected argument '" +std::string( next )+ "'", visitor);
 						return;
 					}
 
@@ -1295,7 +1305,7 @@ namespace structopt {
 		// Specialization for std::string
 		template<>
 		inline auto parser::parse_single_argument<std::string>(const char*) -> std::string {
-			return arguments[next_index];
+			return std::string(arguments[next_index]);
 		}
 
 		// Specialization for bool
@@ -1319,7 +1329,7 @@ namespace structopt {
 				"off", "no", "0", "false"
 			};
 
-			std::string current_argument = arguments[current_index];
+			std::string current_argument = std::string(arguments[current_index]);
 
 			// Convert argument to lower case
 			std::transform(current_argument.begin(),
@@ -1368,7 +1378,7 @@ namespace structopt {
 			visitor.optional_field_names.emplace_back("version");
 
 			// Construct the argument parser
-			structopt::details::parser parser = { .visitor = visitor, .arguments = arguments };
+			structopt::details::parser parser(visitor,arguments);
 
 			for(std::size_t i = 1; i < parser.arguments.size(); i++) {
 				parser.current_index = i;
@@ -1410,7 +1420,7 @@ namespace structopt {
 
 			if(parser.current_index < parser.arguments.size()) {
 				throw structopt::exception(
-					"Error: unrecognized argument '" + parser.arguments[parser.current_index] + "'",
+					"Error: unrecognized argument '" + std::string(parser.arguments[parser.current_index]) + "'",
 					parser.visitor);
 			}
 
