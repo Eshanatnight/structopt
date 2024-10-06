@@ -7,8 +7,8 @@
       "request": "launch",
       "preLaunchTask": "Compile",
       "program": "${workspaceFolder}/main",
-      "args": ["new", "hello"],
-      "cwd": "${fileDirname}"
+      "args": [],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

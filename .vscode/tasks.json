@@ -10,7 +10,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "command": "clang++ -g -std=c++17 -Wall -Wextra -Wpedantic -Werror -o main ./src/main.cpp",
+            "command": "clang++ -g -std=c++17 -o main ./src/main.cpp",
         }
     ]
 }

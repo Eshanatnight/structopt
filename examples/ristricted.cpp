@@ -1,29 +1,32 @@
-#include <iostream>
-#include <string>
 #include "structopt.hpp"
 
-struct Cli {
- struct New : structopt::sub_command {
-  std::string projectName;
- };
+#include <iostream>
+#include <string>
 
- // sub commands
- New new_;
+struct Cli {
+	struct New : structopt::sub_command {
+		std::string projectName;
+	};
+
+	// sub commands
+	New new_;
 };
 
+// NOLINTNEXTLINE
 STRUCTOPT(Cli::New, projectName);
+// NOLINTNEXTLINE
 STRUCTOPT(Cli, new_);
 
-int main(int argc, char** argv) {
- try {
- const auto cli = structopt::app("main").parse<Cli>(argc, argv);
+auto main(int argc, char** argv) -> int {
+	try {
+		const auto cli = structopt::app("main").parse<Cli>(argc, argv);
 
- // Print out parsed arguments:
-  std::cout << "New project name: " << cli.new_.projectName << "\n";
+		// Print out parsed arguments:
+		std::cout << "New project name: " << cli.new_.projectName << "\n";
 
- } catch (const structopt::exception &e) {
-  std::cerr << e.what() << std::endl;
-  std::cerr << e.help();
- }
- return 0;
+	} catch(const structopt::exception& e) {
+		std::cerr << e.what() << std::endl;
+		std::cerr << e.help();
+	}
+	return 0;
 }

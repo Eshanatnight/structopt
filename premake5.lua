@@ -1,17 +1,20 @@
 -- premake5.lua
+local outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+local objectDir = "build/bin-int/" .. outputdir .. "/%{prj.name}"
+local targetDir = "build/bin/" .. outputdir .. "/%{prj.name}"
 
 workspace("structopt_examples")
-configurations({ "Debug", "Release" })
+location ("build")
+configurations({ "Debug" })
 platforms({ "x64" })
 
-outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 project("demo")
 kind("ConsoleApp")
 language("C++")
 cppdialect("C++17")
-targetdir("build/bin/" .. outputdir .. "/%{prj.name}")
-objdir("build/bin-int/" .. outputdir .. "/%{prj.name}")
+targetdir(targetDir)
+objdir(objectDir)
 includedirs({ "./src" })
 files({ "./examples/demo.cpp" })
 

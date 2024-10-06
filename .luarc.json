@@ -1,0 +1,17 @@
+{
+    "diagnostics.globals": [
+        "vim",
+        "workspace",
+        "configurations",
+        "platforms",
+        "project",
+        "language",
+        "cppdialect",
+        "targetdir",
+        "objdir",
+        "includedirs",
+        "files",
+        "kind",
+        "location"
+    ]
+}

@@ -1,30 +1,31 @@
 #include "structopt.hpp"
 
 struct Options {
-  // Flag arguments
-  std::optional<bool> a = false;
-  std::optional<bool> b = false;
+	// Flag arguments
+	std::optional<bool> a = false;
+	std::optional<bool> b = false;
 
-  // Optional argument
-  // e.g., -c 1.1 2.2
-  std::optional<std::array<float, 2>> c = {};
+	// Optional argument
+	// e.g., -c 1.1 2.2
+	std::optional<std::array<float, 2>> c;
 };
+
+// NOLINTNEXTLINE
 STRUCTOPT(Options, a, b, c);
 
-int main(int argc, char *argv[]) {
-  try {
-    auto options = structopt::app("my_app").parse<Options>(argc, argv);
+auto main(int argc, char* argv[]) -> int {
+	try {
+		auto options = structopt::app("my_app").parse<Options>(argc, argv);
 
-    // Print parsed arguments:
+		// Print parsed arguments:
 
-    std::cout << std::boolalpha << "a = " << options.a.value()
-              << ", b = " << options.b.value() << "\n";
-    if (options.c.has_value()) {
-      std::cout << "c = [" << options.c.value()[0] << ", " << options.c.value()[1]
-                << "]\n";
-    }
-  } catch (structopt::exception &e) {
-    std::cout << e.what() << "\n";
-    std::cout << e.help();
-  }
+		std::cout << std::boolalpha << "a = " << options.a.value() << ", b = " << options.b.value()
+				  << "\n";
+		if(options.c.has_value()) {
+			std::cout << "c = [" << options.c.value()[0] << ", " << options.c.value()[1] << "]\n";
+		}
+	} catch(structopt::exception& e) {
+		std::cout << e.what() << "\n";
+		std::cout << e.help();
+	}
 }
