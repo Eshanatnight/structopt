@@ -305,15 +305,20 @@ namespace structopt {
 			template<typename T>
 			inline auto operator()(const char* name,
 				T&) -> std::enable_if_t<visit_struct::traits::is_visitable<T>::value, void> {
-				auto _name = std::string(name);
-
 				// name need to be sanitized to handle keywords(`new`, `delete`, `class`, etc.)
 				// how would we identify a keyword? use some sort of convestion
 				// say the var name needs to end with `_` char
+				const auto _name = [&name] {
+					auto str = std::string(name);
 
-				if(_name.back() == '_') {
-					_name.pop_back();
-				}
+					if(str.back() == '_') {
+						str.pop_back();
+					}
+
+					return str;
+				}();
+
+
 				field_names.push_back(_name);
 				nested_struct_field_names.push_back(_name);
 			}
@@ -1075,7 +1080,14 @@ namespace structopt {
 
 				if(current_index < arguments.size()) {
 					const auto& next	  = arguments[current_index];
-					const auto field_name = std::string{ name };
+					const auto field_name = [&name] {
+						auto str = std::string{ name };
+						if(str.back() == '_') {
+							// remove the trailing `_` character
+							str.pop_back();
+						}
+						return str;
+					}();
 
 					// Check if `next` is the start of a subcommand
 					if(visitor.is_field_name(next) && next == field_name) {
@@ -1345,7 +1357,7 @@ namespace structopt {
 		template<typename T>
 		// NOLINTNEXTLINE
 		[[nodiscard]] auto parse(int argc, char* argv[]) -> T {
-			std::vector<std::string> arguments{ argv, argv + argc };
+			const std::vector<std::string_view> arguments{ argv, argv + argc };
 			T argument_struct = T();
 
 			// Visit the struct and save flag, optional and positional field names
