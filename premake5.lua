@@ -1,10 +1,10 @@
 -- premake5.lua
 
 workspace("structopt_examples")
-configurations({ "Debug", "Release" })
+configurations({ "Debug" })
 platforms({ "x64" })
 
-outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+local outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 project("demo")
 kind("ConsoleApp")
