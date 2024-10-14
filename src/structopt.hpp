@@ -793,6 +793,11 @@ namespace structopt::details {
 				argument_struct.invoked_ = true;
 			}
 
+			const auto field_name = [name] {
+				if(name.back() == '_') return name.substr(0, name.length() - 1);
+				return name;
+			}();
+
 			// Save struct field names
 			argument_struct.visitor_.name	 = name; // sub-command name; not the program
 			argument_struct.visitor_.version = visitor.version;
@@ -1109,7 +1114,7 @@ namespace structopt::details {
 
 			const std::string& next = arguments[current_index];
 			// sanitize the field name
-			const std::string_view field_name = [&name] { // TODO: take a copy for now
+			const std::string_view field_name = [&name] {
 				if(name.back() == '_') return name.substr(0, name.length() - 1);
 				return name;
 			}();

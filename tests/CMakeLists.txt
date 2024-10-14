@@ -43,6 +43,7 @@ file(GLOB structopt_TEST_SOURCES
     test_enum_optional_argument.cpp
     test_optional_argument_naming.cpp
     test_double_dash_option_delimiter.cpp
+    test_ristricted_arguments.cpp
     test_trailing_positional_arguments.cpp
     test_tuple_positional_argument.cpp
     test_tuple_optional_argument.cpp
