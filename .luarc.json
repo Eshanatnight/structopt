@@ -12,6 +12,12 @@
         "includedirs",
         "files",
         "kind",
-        "location"
+        "location",
+        "include",
+        "filter",
+        "defines",
+        "system",
+        "buildoptions",
+        "clangtidy"
     ]
 }
