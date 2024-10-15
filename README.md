@@ -134,10 +134,11 @@ include(FetchContent)
 FetchContent_Declare(
   structopt
   GIT_REPOSITORY https://github.com/Eshanatnight/structopt
-  GIT_TAG        main
+  GIT_TAG        v0.2.1
 )
 
-fetchcontent_makeavailable(structopt)
+FetchContent_GetProperties(structopt)
+FetchContent_MakeAvailable(structopt)
 set(STRUCTOPT_SRC ${structopt_SOURCE_DIR}/src)
 
 #...
@@ -355,6 +356,7 @@ Pathspec : bar.txt
 Flag arguments are `std::optional<bool>` with a default value.
 
 > **_NOTE_**
+>
 > 1. The default value here is **important**. It is not a flag if a default value isn't provided. It will simply be an optional argument.
 > 2. If `--verbose` is a flag argument with a default value of `false`, then providing the argument will set it to `true`. If `--verbose` does not have a default value, then `structopt` will expect the user to provide a value, e.g., `--verbose true`.
 
@@ -1022,4 +1024,3 @@ Usage: ./my_app input_file output_file [--bind-address BIND_ADDRESS] [files...]
 ```
 
 See the [examples](./examples) directory for more examples.
-

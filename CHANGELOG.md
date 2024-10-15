@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## STRUCTOPT v0.2.1
+
+[#4](https://github.com/Eshanatnight/structopt/issues/4)
+Drop down cpp dialect to C++17
+
+[#6](https://github.com/Eshanatnight/structopt/issues/6)
+fix: bug in working with ristricted keywords
+
+[#7](https://github.com/Eshanatnight/structopt/issues/7)
+add Tests
+
+[#8](https://github.com/Eshanatnight/structopt/issues/8)
+use string_view rather than string
+
+update build script to use premake5 or cmake
+
 ## STRUCTOPT v0.2
 
 [#1](https://github.com/Eshanatnight/structopt/issues/1)
