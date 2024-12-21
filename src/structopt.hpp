@@ -267,11 +267,10 @@ namespace structopt {
 
 			// Visitor function for std::optional - could be an option or a flag
 			template<typename T>
-			inline auto operator()(std::string_view name, T&) ->
-				typename std::enable_if<structopt::is_specialization<T, std::optional>::value,
-					void>::type {
+			auto operator()(std::string_view name, T&)
+				-> std::enable_if_t<structopt::is_specialization<T, std::optional>::value, void> {
 				field_names.emplace_back(name);
-				if constexpr(std::is_same<typename T::value_type, bool>::value) {
+				if constexpr(std::is_same_v<typename T::value_type, bool>) {
 					flag_field_names.emplace_back(name);
 				} else {
 					optional_field_names.emplace_back(name);
@@ -280,10 +279,10 @@ namespace structopt {
 
 			// Visitor function for any positional field (not std::optional)
 			template<typename T>
-			inline auto operator()(std::string_view name, T&) ->
-				typename std::enable_if<!structopt::is_specialization<T, std::optional>::value &&
-											!visit_struct::traits::is_visitable<T>::value,
-					void>::type {
+			auto operator()(std::string_view name, T&)
+				-> std::enable_if_t<!structopt::is_specialization<T, std::optional>::value &&
+										!visit_struct::traits::is_visitable<T>::value,
+					void> {
 				// BUG: not sanitizing the name may cause an issue down the line?
 				field_names.emplace_back(name);
 				positional_field_names.emplace_back(name);
@@ -306,8 +305,8 @@ namespace structopt {
 
 			// Visitor function for nested structs
 			template<typename T>
-			inline auto operator()(std::string_view name, T&) ->
-				typename std::enable_if<visit_struct::traits::is_visitable<T>::value, void>::type {
+			auto operator()(std::string_view name, T&)
+				-> std::enable_if_t<visit_struct::traits::is_visitable<T>::value, void> {
 				// name need to be sanitized to handle keywords(`new`, `delete`, `class`, etc.)
 				// how would we identify a keyword? use some sort of convestion
 				// say the var name needs to end with `_` char
@@ -356,22 +355,9 @@ namespace structopt {
 					if(!flag_field_names.empty()) {
 						out_stream << "\n\nFLAGS:\n";
 						for(const auto& flag: flag_field_names) {
-
-							// Generate kebab case and present as flag
-							// TODO: moving the flag removes the allocation
-							auto kebab_case				= details::string_to_kebab(flag);
-							const std::string long_form = [&kebab_case, flag] {
-								std::string str;
-								if(kebab_case != flag) {
-									str = kebab_case;
-								} else {
-									str = flag;
-								}
-								return str;
-							}();
-
 							out_stream << "    -" << flag[0] << ", --" << flag << "\n";
 
+							// NOLINTNEXTLINE
 							switch(flag[0]) {
 							case 'h' :
 								has_h = true;
@@ -409,6 +395,7 @@ namespace structopt {
 										   << "\n";
 							}
 
+							// NOLINTNEXTLINE
 							switch(option[0]) {
 							case 'h' :
 								has_h = true;
@@ -490,8 +477,8 @@ namespace structopt {
 
 namespace structopt::details {
 	// Effectively s1.replace('-', '_') == s2
-	inline auto equal_strings_replace_hyphens(
-		std::string_view str1, std::string_view str2) -> bool {
+	inline auto equal_strings_replace_hyphens(std::string_view str1, std::string_view str2)
+		-> bool {
 		return std::equal(str1.begin(), str1.end(), str2.begin(), [](char char1, char char2) {
 			return char1 == char2 || (char1 == '-' && char2 == '_');
 		});
@@ -570,8 +557,8 @@ namespace structopt::details {
 			return false;
 		}
 
-		static auto is_optional_field(
-			std::string_view next, const std::string_view& field_name) -> bool {
+		static auto is_optional_field(std::string_view next, const std::string_view& field_name)
+			-> bool {
 			if((next.rfind('-', 0) == 0 && next.substr(1) == field_name) ||
 				(next.rfind("--", 0) == 0 && next.substr(2) == field_name) ||
 				(next == std::data({ '-', field_name[0], '\0' })))
@@ -637,8 +624,8 @@ namespace structopt::details {
 			return { success, delimiter };
 		}
 
-		static auto split_delimited_argument(
-			char delimiter, std::string_view next) -> std::pair<std::string, std::string> {
+		static auto split_delimited_argument(char delimiter, std::string_view next)
+			-> std::pair<std::string, std::string> {
 			std::string key;
 			std::string value;
 			bool delimiter_found = false;
@@ -662,8 +649,8 @@ namespace structopt::details {
 		// Get the optional field name if any from
 		// e.g., `-v` => `verbose`
 		// e.g., `-log-level` => `log_level`
-		auto get_full_optional_field_name(
-			const std::string_view& next) -> std::optional<std::string_view> {
+		auto get_full_optional_field_name(const std::string_view& next)
+			-> std::optional<std::string_view> {
 			std::optional<std::string_view> result;
 
 			if(next.size() == 2 && next[0] == '-') {
@@ -703,7 +690,7 @@ namespace structopt::details {
 
 			if constexpr(visit_struct::traits::is_visitable<T>::value) {
 				result = parse_nested_struct<T>(name);
-			} else if constexpr(std::is_enum<T>::value) {
+			} else if constexpr(std::is_enum_v<T>) {
 				result = parse_enum_argument<T>(name);
 				next_index += 1;
 			} else if constexpr(structopt::is_specialization<T, std::pair>::value) {
@@ -759,13 +746,13 @@ namespace structopt::details {
 		// Any field that can be constructed using std::stringstream Not container type
 		// Not a visitable type, i.e., a nested struct
 		template<typename T>
-		inline auto parse_single_argument(std::string_view) ->
-			typename std::enable_if<!visit_struct::traits::is_visitable<T>::value, T>::type {
+		auto parse_single_argument(std::string_view)
+			-> std::enable_if_t<!visit_struct::traits::is_visitable<T>::value, T> {
 			std::string argument = arguments[next_index];
 			std::istringstream is_stream(argument);
 			T result;
 
-			if constexpr(std::is_integral<T>::value) {
+			if constexpr(std::is_integral_v<T>) {
 				if(is_hex_notation(argument)) {
 					is_stream >> std::hex >> result;
 				} else if(is_octal_notation(argument)) {
@@ -785,11 +772,11 @@ namespace structopt::details {
 
 		// Nested visitable struct
 		template<typename T>
-		inline auto parse_nested_struct(std::string_view name) ->
-			typename std::enable_if<visit_struct::traits::is_visitable<T>::value, T>::type {
+		auto parse_nested_struct(std::string_view name)
+			-> std::enable_if_t<visit_struct::traits::is_visitable<T>::value, T> {
 			T argument_struct;
 
-			if constexpr(std::is_base_of<structopt::sub_command, T>::value) {
+			if constexpr(std::is_base_of_v<structopt::sub_command, T>) {
 				argument_struct.invoked_ = true;
 			}
 
@@ -966,7 +953,7 @@ namespace structopt::details {
 		template<typename T>
 		void parse_tuple_element(
 			std::string_view name, std::size_t index, std::size_t size, T&& result) {
-			auto [value, success] = parse_argument<typename std::remove_reference<T>::type>(name);
+			auto [value, success] = parse_argument<std::remove_reference_t<T>>(name);
 			if(!success) {
 				if(next_index == arguments.size()) {
 					// end of arguments list failed to parse tuple <>. expected `size`
@@ -1102,11 +1089,9 @@ namespace structopt::details {
 
 		// Visitor function for nested struct
 		template<typename T>
-		inline auto operator()(std::string_view name, T& value) ->
-			typename std::enable_if<visit_struct::traits::is_visitable<T>::value, void>::type {
-			if(next_index > current_index) {
-				current_index = next_index;
-			}
+		auto operator()(std::string_view name, T& value)
+			-> std::enable_if_t<visit_struct::traits::is_visitable<T>::value, void> {
+			current_index = std::max(next_index, current_index);
 
 			if(current_index >= arguments.size()) {
 				return;
@@ -1128,13 +1113,11 @@ namespace structopt::details {
 
 		// Visitor function for any positional field (not std::optional)
 		template<typename T>
-		inline auto operator()(std::string_view name, T& result) ->
-			typename std::enable_if<!structopt::is_specialization<T, std::optional>::value &&
-										!visit_struct::traits::is_visitable<T>::value,
-				void>::type {
-			if(next_index > current_index) {
-				current_index = next_index;
-			}
+		auto operator()(std::string_view name, T& result)
+			-> std::enable_if_t<!structopt::is_specialization<T, std::optional>::value &&
+									!visit_struct::traits::is_visitable<T>::value,
+				void> {
+			current_index = std::max(next_index, current_index);
 
 			if(current_index >= arguments.size()) return;
 
@@ -1172,12 +1155,9 @@ namespace structopt::details {
 		// Visitor function for std::optional field
 		template<typename T>
 		// NOLINTNEXTLINE
-		inline auto operator()(std::string_view name, T& value) ->
-			typename std::enable_if<structopt::is_specialization<T, std::optional>::value,
-				void>::type {
-			if(next_index > current_index) {
-				current_index = next_index;
-			}
+		auto operator()(std::string_view name, T& value)
+			-> std::enable_if_t<structopt::is_specialization<T, std::optional>::value, void> {
+			current_index = std::max(next_index, current_index);
 
 			if(current_index < arguments.size()) {
 				const auto next		  = arguments[current_index];
@@ -1197,7 +1177,7 @@ namespace structopt::details {
 				if(!double_dash_encountered && is_optional_field(next, field_name)) {
 
 					// this is an optional argument matching the current struct field
-					if constexpr(std::is_same<typename T::value_type, bool>::value) {
+					if constexpr(std::is_same_v<typename T::value_type, bool>) {
 						// It is a boolean optional argument
 						// Does it have a default value?
 						// If yes, this is a FLAG argument, e.g,, "--verbose" will set it to
@@ -1334,9 +1314,7 @@ namespace structopt::details {
 	// Converts argument to lower case before check
 	template<>
 	inline auto parser::parse_single_argument<bool>(std::string_view name) -> bool {
-		if(next_index > current_index) {
-			current_index = next_index;
-		}
+		current_index = std::max(next_index, current_index);
 
 		if(current_index >= arguments.size()) {
 			return false;
