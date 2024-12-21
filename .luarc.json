@@ -18,6 +18,7 @@
         "defines",
         "system",
         "buildoptions",
-        "clangtidy"
+        "clangtidy",
+        "symbols"
     ]
 }

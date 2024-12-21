@@ -2,9 +2,9 @@ local OUTPUTDIR = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 local BUILDKIND = "ConsoleApp"
 local LANGUAGE = "C++"
 -- local OBJECTDIR = "../build/" .. "%{wks.name}/" .. OUTPUTDIR .. "/bin-int/"  .. "/%{prj.name}"
-local OBJECTDIR = "../build/" .. "%{wks.name}/" .. "bin-int/"  .. "/%{prj.name}"
+local OBJECTDIR = "../build/" .. "%{wks.name}/" .. "bin-int/" .. "/%{prj.name}"
 -- local TARGETDIR = "../build/" .. "%{wks.name}/"  .. OUTPUTDIR  .. "/bin/" .. "/%{prj.name}"
-local TARGETDIR = "../build/" .. "%{wks.name}/"   .. "bin/" .. "/%{prj.name}"
+local TARGETDIR = "../build/" .. "%{wks.name}/" .. "bin/" .. "/%{prj.name}"
 local STANDARD = "C++17"
 
 --- @class utils
@@ -49,7 +49,8 @@ function M.makeWorkspace(Name, BuildScriptLocation, Configs, Platforms, PreProce
 	location(BuildScriptLocation)
 	configurations(Configs)
 	platforms(Platforms)
-
+	symbols("On")
+	optimize("Debug")
 	if PreProcessorDefines ~= nil then
 		defines(PreProcessorDefines)
 	end
@@ -57,7 +58,7 @@ function M.makeWorkspace(Name, BuildScriptLocation, Configs, Platforms, PreProce
 	filter("system:windows")
 	system("windows")
 	-- clangtidy("On")
-	buildoptions({"/W4"})
+	buildoptions({ "/W4" })
 
 	filter("system:linux", "action:gmake")
 	buildoptions({ "-Wall", "-Wno-long-long", "-pedantic" })
