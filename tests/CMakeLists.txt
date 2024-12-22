@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(structopt VERSION 0.2)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tbin)
+
 if(MSVC)
   # Force to always compile with W4
   if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")

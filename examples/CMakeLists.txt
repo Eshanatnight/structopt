@@ -63,5 +63,3 @@ target_include_directories(printing_help_custom PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_executable(option_delimiters option_delimiters.cpp)
 target_include_directories(option_delimiters PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-add_executable(3d_array_posi 3d_array_positional.cpp)
-target_include_directories(3d_array_posi PRIVATE ${CMAKE_SOURCE_DIR}/src)

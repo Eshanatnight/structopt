@@ -49,7 +49,8 @@
 #define DOCTEST_VERSION_MAJOR 2
 #define DOCTEST_VERSION_MINOR 3
 #define DOCTEST_VERSION_PATCH 5
-#define DOCTEST_VERSION_STR "2.3.5"
+#define DOCTEST_VERSION_STR	  "2.3.5"
+#define DOCTEST_SIGSTKSZ 524288
 
 #define DOCTEST_VERSION                                                                            \
     (DOCTEST_VERSION_MAJOR * 10000 + DOCTEST_VERSION_MINOR * 100 + DOCTEST_VERSION_PATCH)
@@ -583,7 +584,7 @@ namespace assertType {
         DT_WARN_THROWS_WITH    = is_throws_with | is_warn,
         DT_CHECK_THROWS_WITH   = is_throws_with | is_check,
         DT_REQUIRE_THROWS_WITH = is_throws_with | is_require,
-        
+
         DT_WARN_THROWS_WITH_AS    = is_throws_with | is_throws_as | is_warn,
         DT_CHECK_THROWS_WITH_AS   = is_throws_with | is_throws_as | is_check,
         DT_REQUIRE_THROWS_WITH_AS = is_throws_with | is_throws_as | is_require,
@@ -1483,7 +1484,7 @@ namespace detail {
     DOCTEST_INTERFACE void toStream(std::ostream* s, int long long in);
     DOCTEST_INTERFACE void toStream(std::ostream* s, int long long unsigned in);
 
-    // ContextScope base class used to allow implementing methods of ContextScope 
+    // ContextScope base class used to allow implementing methods of ContextScope
     // that don't depend on the template parameter in doctest.cpp.
     class DOCTEST_INTERFACE ContextScopeBase : public IContextScope {
     protected:
@@ -1523,7 +1524,7 @@ namespace detail {
         bool log();
         void react();
     };
-    
+
     template <typename L>
     ContextScope<L> MakeContextScope(const L &lambda) {
         return ContextScope<L>(lambda);
@@ -3519,7 +3520,7 @@ namespace detail {
             if(matchesAny(m_signature.m_name, s->filters[7], false, s->case_sensitive))
                 return;
         }
-        
+
         // if a Subcase on the same level has already been entered
         if(s->subcasesStack.size() < size_t(s->subcasesCurrentMaxLevel)) {
             s->should_reenter = true;
@@ -3996,7 +3997,7 @@ namespace {
         int         id;
         const char* name;
     };
-    SignalDefs signalDefs[] = {{SIGINT, "SIGINT - Terminal interrupt signal"},
+    constexpr static SignalDefs signalDefs[] = {{SIGINT, "SIGINT - Terminal interrupt signal"},
                                {SIGILL, "SIGILL - Illegal instruction signal"},
                                {SIGFPE, "SIGFPE - Floating point error signal"},
                                {SIGSEGV, "SIGSEGV - Segmentation violation signal"},
@@ -4008,12 +4009,12 @@ namespace {
         static bool             isSet;
         static struct sigaction oldSigActions[DOCTEST_COUNTOF(signalDefs)];
         static stack_t          oldSigStack;
-        static char             altStackMem[4 * SIGSTKSZ];
+        static char             altStackMem[DOCTEST_SIGSTKSZ];
 
         static void handleSignal(int sig) {
             const char* name = "<unknown signal>";
             for(std::size_t i = 0; i < DOCTEST_COUNTOF(signalDefs); ++i) {
-                SignalDefs& def = signalDefs[i];
+                const SignalDefs& def = signalDefs[i];
                 if(sig == def.id) {
                     name = def.name;
                     break;
@@ -4757,7 +4758,7 @@ namespace {
             test_case_start_impl(in);
             xml.ensureTagClosed();
         }
-        
+
         void test_case_reenter(const TestCaseData&) override {}
 
         void test_case_end(const CurrentTestCaseStats& st) override {
@@ -5180,7 +5181,7 @@ namespace {
             hasLoggedCurrentTestStart = false;
             tc                        = &in;
         }
-        
+
         void test_case_reenter(const TestCaseData&) override {}
 
         void test_case_end(const CurrentTestCaseStats& st) override {
@@ -5826,7 +5827,7 @@ int Context::run() {
             DOCTEST_ITERATE_THROUGH_REPORTERS(test_case_start, tc);
 
             p->timer.start();
-            
+
             bool run_test = true;
 
             do {
@@ -5863,7 +5864,7 @@ int Context::run() {
                     run_test = false;
                     p->failure_flags |= TestCaseFailureReason::TooManyFailedAsserts;
                 }
-                
+
                 if(p->should_reenter && run_test)
                     DOCTEST_ITERATE_THROUGH_REPORTERS(test_case_reenter, tc);
                 if(!p->should_reenter)
