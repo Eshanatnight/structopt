@@ -30,7 +30,7 @@ file(GLOB structopt_TEST_SOURCES
     main.cpp
     test_single_positional_argument.cpp
     test_array_positional_argument.cpp
-    # test_3d_array_positional_argument.cpp
+    test_3d_array_positional_argument.cpp
     test_single_optional_argument.cpp
     test_array_optional_argument.cpp
     test_single_positional_and_optional.cpp

@@ -4,7 +4,7 @@
 using doctest::test_suite;
 
 struct Array3dArgument {
-	std::array<std::array<std::array<double, 3>, 4>, 4> value = {};
+	std::array<std::array<std::array<float, 3>, 4>, 4> value = {};
 };
 
 // NOLINTNEXTLINE
@@ -66,7 +66,7 @@ TEST_CASE(
 				"0.51",
 				"0.35" });
 
-		REQUIRE(arguments.value == std::array<std::array<std::array<double, 3>, 4>, 4>{
+		REQUIRE(arguments.value == std::array<std::array<std::array<float, 3>, 4>, 4>{
 									   { { { { 0, 0.51, 0.35 },
 											 { 0, 0.51, 0.35 },
 											 { 0, 0.51, 0.35 },
