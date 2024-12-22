@@ -2,9 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(structopt VERSION 0.2)
 
-# set CMAKE_BUILD_TYPE to Debug for Dev
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 add_executable(demo demo.cpp)
@@ -63,3 +62,6 @@ target_include_directories(printing_help_custom PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(option_delimiters option_delimiters.cpp)
 target_include_directories(option_delimiters PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(3d_array_posi 3d_array_positional.cpp)
+target_include_directories(3d_array_posi PRIVATE ${CMAKE_SOURCE_DIR}/src)

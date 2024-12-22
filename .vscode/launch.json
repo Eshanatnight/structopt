@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "dbg",
-      "type": "lldb",
+      "type": "codelldb",
       "request": "launch",
       "preLaunchTask": "Compile",
       "program": "${workspaceFolder}/main",

@@ -19,6 +19,7 @@
         "system",
         "buildoptions",
         "clangtidy",
-        "symbols"
+        "symbols",
+        "optimize"
     ]
 }
